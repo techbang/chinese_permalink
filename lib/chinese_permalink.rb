@@ -12,9 +12,14 @@ module ChinesePermalink
       class_attribute :permalink_attrs, :permalink_field, :before_methods, :after_methods
     end
     base.extend ClassMethods
-  end 
+  end
 
-  private 
+  private
+
+  def delay_create_permalink
+    delay.create_permalink
+  end
+
   def create_permalink
     if self.permalink.nil?
       chinese_permalink = self.class.permalink_attrs.collect do |attr_name|
@@ -45,7 +50,7 @@ module ChinesePermalink
   def remove_space(text)
     text.gsub(/\s+/, '-')
   end
-  
+
   def remove_punctuation(text)
     text.gsub(/&#39;|&amp;|&quot;|&lt;|&gt;|\/|/, '')
   end
@@ -66,7 +71,7 @@ module ChinesePermalink
       self.before_methods = Array(options[:before_methods])
       self.after_methods = Array(options[:after_methods])
 
-      after_save :create_permalink
+      after_save :delay_create_permalink
     end
   end
 end
