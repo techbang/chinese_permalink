@@ -9,6 +9,11 @@ module ChinesePermalink
   end
 
   private
+
+  def delay_create_permalink
+    delay.create_permalink
+  end
+
   def create_permalink
     if self.permalink.nil?
       chinese_permalink = self.class.permalink_attrs.collect do |attr_name|
@@ -60,7 +65,7 @@ module ChinesePermalink
       self.before_methods = Array(options[:before_methods])
       self.after_methods = Array(options[:after_methods])
 
-      after_save :create_permalink
+      after_save :delay_create_permalink
     end
   end
 
