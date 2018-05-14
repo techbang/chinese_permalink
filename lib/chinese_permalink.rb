@@ -83,24 +83,32 @@ module ChinesePermalink
   end
 
   class Translate
-    class <<self
+    class << self
       def t(text)
-        response = Net::HTTP.get(URI.parse(URI.encode(translator_endpoint + text)))
-        response =~ %r|<string.*?>(.*?)</string>|
-        $1.to_s
+        uri = URI(translator_endpoint)
+        content = %Q( [{ "Text" : "#{text}" }] )
+        request = set_request(uri, content)
+        response = Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == 'https') { |http| http.request(request) }
+        result = response.body.force_encoding("utf-8")
+        JSON.parse(result)[0]['translations'][0]['text'].to_s
+      end
+
+      def set_request(uri, content)
+        request = Net::HTTP::Post.new(uri)
+        request['Content-type'] = 'application/json'
+        request['Content-length'] = content.length
+        request['Ocp-Apim-Subscription-Key'] = access_token
+        request['X-ClientTraceId'] = SecureRandom.uuid
+        request.body = content
+        request
       end
 
       def translator_endpoint
-        "https://api.microsofttranslator.com/V2/Http.svc/Translate?appId=#{authorization_token}&to=en&text="
+        'https://api.cognitive.microsofttranslator.com/translate?api-version=3.0&to=en'
       end
 
-      def authorization_token
-        config = YAML.load(File.open(File.join(Rails.root, "config/chinese_permalink.yml")))
-        access_token = config['microsoft']['key']
-        access_token_endpoint = "https://api.cognitive.microsoft.com/sts/v1.0/issueToken?Subscription-Key=#{access_token}"
-        response = Net::HTTP.post_form(URI(access_token_endpoint), {})
-
-        response.code == "200" ? "Bearer #{response.body}" : nil
+      def access_token
+        YAML.load(File.open(File.join(Rails.root, "config/chinese_permalink.yml")))['microsoft']['key']
       end
     end
   end
